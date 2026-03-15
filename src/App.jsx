@@ -3,12 +3,13 @@ import Login from './components/Auth/Login'
 import EmployeeDashboard from './components/Dashboard/EmployeeDashboard'
 import AdminDashboard from './components/Dashboard/AdminDashboard'
 import { AuthContext } from './context/AuthProvider'
+import { getLocalStorage, setLocalStorage } from './utils/localStorage'
 
 const App = () => {
 
   const [user, setUser] = useState(null)
   const [loggedInUserData, setLoggedInUserData] = useState(null)
-  const [userData,SetUserData] = useContext(AuthContext)
+  const [userData] = useContext(AuthContext)
 
   useEffect(()=>{
     const loggedInUser = localStorage.getItem('loggedInUser')
@@ -23,20 +24,29 @@ const App = () => {
 
 
   const handleLogin = (email, password) => {
-    if (email == 'admin@me.com' && password == '123') {
+    // Ensure default seed data exists even if localStorage was cleared manually
+    setLocalStorage()
+
+    const { admin: storedAdmin = [], employees: seededEmployees = [] } = getLocalStorage() || {}
+    const adminMatch = storedAdmin.find((admin) => admin.email === email && admin.password === password)
+
+    if (adminMatch) {
       setUser('admin')
-      localStorage.setItem('loggedInUser', JSON.stringify({ role: 'admin' }))
-    } else if (userData) {
-      const employee = userData.find((e) => email == e.email && e.password == password)
-      if (employee) {
-        setUser('employee')
-        setLoggedInUserData(employee)
-        localStorage.setItem('loggedInUser', JSON.stringify({ role: 'employee',data:employee }))
-      }
+      setLoggedInUserData(adminMatch)
+      localStorage.setItem('loggedInUser', JSON.stringify({ role: 'admin', data: adminMatch }))
+      return
     }
-    else {
-      alert("Invalid Credentials")
+
+    const employeeSource = (userData && userData.length > 0) ? userData : seededEmployees
+    const employee = employeeSource.find((employee) => employee.email === email && employee.password === password)
+    if (employee) {
+      setUser('employee')
+      setLoggedInUserData(employee)
+      localStorage.setItem('loggedInUser', JSON.stringify({ role: 'employee', data: employee }))
+      return
     }
+
+    alert('Invalid Credentials')
   }
 
 
